@@ -1,11 +1,11 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace MultiThreadTest
 {
     [TestClass]
     public class ThreadUsageTest
     {
+        #region 线程的基本使用
         /// <summary>
         /// 创建线程
         /// 
@@ -81,7 +81,9 @@ namespace MultiThreadTest
                 th.Abort();
             });
         }
+        #endregion
 
+        #region 线程状态
         /// <summary>
         /// 摘要:
         ///     Specifies the execution states of a System.Threading.Thread.
@@ -129,7 +131,9 @@ namespace MultiThreadTest
             }
             Console.WriteLine();
         }
+        #endregion
 
+        #region 线程优先级
         /// <summary>
         /// 分别在多核和单核上跑两个线程.
         /// 如果是多核, 那么两个线程的计数会差不多.
@@ -209,15 +213,15 @@ namespace MultiThreadTest
                     counter.ToString("N0"));
             }
         }
+        #endregion
 
+        #region 前台线程和后台线程
         /// <summary>
         /// 默认情况下, 显式创建的线程是前台线程.
         /// 
         /// 前台线程和后台线程的区别是:
         ///     进程会等待所有的前台线程完成之后再结束, 但如果只剩下后台线程, 则不会等待后台线程, 而是直接结束.
         ///     如果定义了一个不会完成的前台线程, 则主程序不会正常结束.
-        ///     
-        /// 单元测试的情况下测不出来...为什么?
         /// </summary>
         [TestMethod]
         public void TestForegroundBackground()
@@ -258,6 +262,255 @@ namespace MultiThreadTest
                 }
             }
         }
-        
+        #endregion
+
+        #region 线程传递参数的三种方式
+        /// <summary>
+        /// 向线程传递参数的方式:
+        /// 1. 通过自定义类型, 然后在类型的ctor中传入参数, 并在类型中定义无返回值无参数列表的符合委托ThreadStart的方法, 传给Thread构造函数
+        /// 2. 通过Thread构造函数传入ParameterizedThreadStart委托类型的方法, 并使用Thread.Start(object? parameter)传入参数
+        /// 3. 闭包
+        /// </summary>
+        [TestMethod]
+        public void TestPassParamsToThread()
+        {
+            // 1. 通过类型的构造函数传入参数给线程
+            var cls = new PrintNumbersWithIterationsClass(10);
+            ThreadStart ts = cls.PrintNumbersWithIterations;
+            var thCls = new Thread(ts);
+            thCls.Start();
+
+            // 2. 通过Thread.Start(object? parameter)
+            ParameterizedThreadStart pts = PrintNumbersWithParam;
+            var thStart = new Thread(PrintNumbersWithParam);
+            thStart.Start(10);
+
+            // 3. 闭包, 和1一个意思
+            var thCls1 = new Thread(() => PrintNumbersWithParam(10));
+            thCls1.Start();
+
+            thCls.Join();
+            thStart.Join();
+            thCls1.Join();
+        }
+
+        static void PrintNumbersWithParam(object iterations)
+        {
+            int it = (int)iterations;
+            for (int i = 0; i < it; i++)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(0.5));
+                Console.WriteLine($"{Thread.CurrentThread.Name} prints {i}");
+            }
+        }
+        #endregion
+
+        #region lock
+        /// <summary>
+        /// 测试lock的用法
+        /// Counter的线程同步和非线程同步的实现
+        /// 
+        /// 现象:
+        /// 在不同线程中对同一变量做同样多次数的加减后
+        ///     非线程同步的实现输出的结果不确定
+        ///     线程同步的实现输出结果总为0
+        /// 
+        /// 用法:
+        /// private readonly object _syncRoot = new object();
+        /// 
+        /// lock(_syncRoot) { // ... }
+        /// </summary>
+        [TestMethod]
+        public void TestLock()
+        {
+            for (int testTimes = 0; testTimes < 10; testTimes++)
+            {
+                var c = new Counter();
+                var t1 = new Thread(() => TestCounter(c));
+                var t2 = new Thread(() => TestCounter(c));
+                var t3 = new Thread(() => TestCounter(c));
+
+                t1.Start();
+                t2.Start();
+                t3.Start();
+
+                t1.Join();
+                t2.Join();
+                t3.Join();
+
+                Console.WriteLine("[W] Total count: {0}", c.Count);
+                Console.WriteLine("=========================");
+
+                var cl = new CounterWithLock();
+                t1 = new Thread(() => TestCounter(cl));
+                t2 = new Thread(() => TestCounter(cl));
+                t3 = new Thread(() => TestCounter(cl));
+
+                t1.Start();
+                t2.Start();
+                t3.Start();
+
+                t1.Join();
+                t2.Join();
+                t3.Join();
+                Console.WriteLine("[R] Total count: {0}", cl.Count);
+                Console.WriteLine("=========================");
+            }
+        }
+
+        static void TestCounter(CounterBase c)
+        {
+            for (int i = 0; i < 100000; i++)
+            {
+                c.Increment();
+                c.Decrement();
+            }
+        }
+
+        class Counter : CounterBase
+        {
+            public override int Count { get; set; }
+
+            public override void Increment()
+            {
+                Count++;
+            }
+            public override void Decrement()
+            {
+                Count--;
+            }
+        }
+
+        class CounterWithLock : CounterBase
+        {
+            private readonly object _syncRoot = new object();
+            public override int Count { get; set; }
+
+            public override void Increment()
+            {
+                lock (_syncRoot)
+                {
+                    Count++;
+                }
+            }
+
+            public override void Decrement()
+            {
+                lock (_syncRoot)
+                {
+                    Count--;
+                }
+            }
+        }
+
+        abstract class CounterBase
+        {
+            public abstract int Count { get; set; }
+            public abstract void Increment();
+            public abstract void Decrement();
+        }
+
+        #endregion
+
+        #region Monitor
+        static void LockTooMuch(object lock1, object lock2)
+        {
+            lock (lock1)
+            {
+                Thread.Sleep(1000);
+                lock (lock2) ;
+            }
+        }
+
+        /// <summary>
+        /// t1              t2
+        /// ---------------------------
+        /// lock1           lock2
+        /// |               |
+        /// 1s              1s
+        /// |               |
+        /// 尝试拿lock2      尝试拿lock1
+        /// 
+        /// 循环等待, 死锁.
+        /// </summary>
+        [TestMethod]
+        public void TestDeadLock()
+        {
+            object lock1 = new object();
+            object lock2 = new object();
+
+            new Thread(() => LockTooMuch(lock1, lock2)).Start();
+
+            lock (lock2)
+            {
+                Thread.Sleep(1000);
+                Console.WriteLine("Monitor.TryEnter在超时后退出");
+                if (Monitor.TryEnter(lock1, TimeSpan.FromSeconds(5)))
+                {
+                    Console.WriteLine("获取资源成功!");
+                }
+                else
+                {
+                    Console.WriteLine("获取资源超时.");
+                }
+            }
+
+            //Console.WriteLine("=======================");
+
+            //new Thread(() => LockTooMuch(lock1, lock2)).Start();
+
+            //lock (lock2)
+            //{
+            //    Console.WriteLine("死锁...");
+            //    Thread.Sleep(1000);
+            //    lock (lock1)
+            //    {
+            //        Console.WriteLine("获取资源成功!");
+            //    }
+            //}
+        }
+        #endregion
+
+        #region try/catch
+        [TestMethod]
+        public void TestTryCatch()
+        {
+            string s1 = "";
+            string s2 = "";
+
+            var th1 = new Thread(() =>
+            {
+                try
+                {
+                    throw new Exception("An intended exception.");
+                }
+                catch (Exception ex)
+                {
+                    s1 = ex.Message;
+                }
+            });
+            th1.Start();
+
+
+            var th2 = new Thread(() =>
+            {
+                throw new Exception("An intended exception.");
+            });
+            try
+            {
+                th2.Start();
+            }
+            catch (Exception ex)
+            {
+                s2 = ex.Message;
+            }
+   
+
+            th1.Join();
+
+            Assert.AreEqual(s1, "An intended exception.");
+            Assert.AreEqual(s2, "");
+        }
+        #endregion
     }
 }
