@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EFTest", "EFTest\EFTest.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MultiThreadTest", "MultiThreadTest\MultiThreadTest.csproj", "{B5407F43-2372-4BE2-8FAD-78B685A56F02}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskSchedulerTest", "TaskSchedulerTest\TaskSchedulerTest.csproj", "{AA60B7CF-399D-4810-9BFF-700BC902985C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{B5407F43-2372-4BE2-8FAD-78B685A56F02}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5407F43-2372-4BE2-8FAD-78B685A56F02}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5407F43-2372-4BE2-8FAD-78B685A56F02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA60B7CF-399D-4810-9BFF-700BC902985C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA60B7CF-399D-4810-9BFF-700BC902985C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA60B7CF-399D-4810-9BFF-700BC902985C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA60B7CF-399D-4810-9BFF-700BC902985C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
